@@ -8,5 +8,5 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Set-Location (Join-Path $RootDir "desktop")
-npm run dist -- --win nsis x64
+npm run dist:win
 exit $LASTEXITCODE
