@@ -1,0 +1,59 @@
+version: 0.1.{build}
+
+image: Visual Studio 2022
+
+branches:
+  only:
+    - main
+
+environment:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "24"
+  DESKTOP_UPDATE_FEED_URL: "https://schedule.bookinghome.one/downloads/desktop"
+
+install:
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      irm https://astral.sh/uv/install.ps1 | iex
+      $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+      uv --version
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      Install-Product node $env:NODE_VERSION x64
+      node --version
+      npm --version
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      uv python install $env:PYTHON_VERSION
+      uv sync --all-groups --frozen
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      Push-Location desktop
+      npm ci
+      Pop-Location
+
+build_script:
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      Push-Location desktop
+      npm run typecheck
+      Pop-Location
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      .\scripts\build-sidecar.ps1
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      Push-Location desktop
+      npm run dist:win
+      Pop-Location
+
+artifacts:
+  - path: dist\desktop\*.exe
+    name: facebook-group-connector-windows-installer
+  - path: dist\desktop\*.blockmap
+    name: facebook-group-connector-windows-blockmap
+  - path: dist\desktop\latest.yml
+    name: facebook-group-connector-windows-update-metadata
