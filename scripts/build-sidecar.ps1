@@ -10,10 +10,27 @@ function Invoke-NativeCommand {
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
   )
 
-  & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
-  $ExitCode = $LASTEXITCODE
-  if ($ExitCode -ne 0) {
-    throw "$FilePath exited with code $ExitCode"
+  $StdoutPath = [System.IO.Path]::GetTempFileName()
+  $StderrPath = [System.IO.Path]::GetTempFileName()
+
+  try {
+    $Process = Start-Process `
+      -FilePath $FilePath `
+      -ArgumentList $Arguments `
+      -NoNewWindow `
+      -PassThru `
+      -Wait `
+      -RedirectStandardOutput $StdoutPath `
+      -RedirectStandardError $StderrPath
+
+    Get-Content $StdoutPath | ForEach-Object { Write-Host $_ }
+    Get-Content $StderrPath | ForEach-Object { Write-Host $_ }
+
+    if ($Process.ExitCode -ne 0) {
+      throw "$FilePath exited with code $($Process.ExitCode)"
+    }
+  } finally {
+    Remove-Item -Force -ErrorAction SilentlyContinue $StdoutPath, $StderrPath
   }
 }
 

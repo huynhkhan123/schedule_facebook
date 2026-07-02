@@ -11,72 +11,19 @@ environment:
   DESKTOP_UPDATE_FEED_URL: "https://schedule.bookinghome.one/downloads/desktop"
 
 install:
-  - ps: |
-      $ErrorActionPreference = "Stop"
-
-      function Invoke-NativeCommand {
-        param(
-          [Parameter(Mandatory = $true)][string]$FilePath,
-          [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
-        )
-
-        & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
-        $ExitCode = $LASTEXITCODE
-        if ($ExitCode -ne 0) {
-          throw "$FilePath exited with code $ExitCode"
-        }
-      }
-
-      irm https://astral.sh/uv/install.ps1 | iex
-      $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
-
-      Invoke-NativeCommand uv --version
-      Invoke-NativeCommand node --version
-      Invoke-NativeCommand npm --version
-      Invoke-NativeCommand uv python install $env:PYTHON_VERSION
-      Invoke-NativeCommand uv sync --all-groups --frozen
-
-      Push-Location desktop
-      try {
-        Invoke-NativeCommand npm ci
-      } finally {
-        Pop-Location
-      }
+  - cmd: powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv --version
+  - cmd: node --version
+  - cmd: npm --version
+  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv python install %PYTHON_VERSION%
+  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv sync --all-groups --frozen
+  - cmd: cd desktop && npm ci
 
 build_script:
-  - ps: |
-      $ErrorActionPreference = "Stop"
-
-      function Invoke-NativeCommand {
-        param(
-          [Parameter(Mandatory = $true)][string]$FilePath,
-          [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
-        )
-
-        & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
-        $ExitCode = $LASTEXITCODE
-        if ($ExitCode -ne 0) {
-          throw "$FilePath exited with code $ExitCode"
-        }
-      }
-
-      Invoke-NativeCommand uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
-
-      Push-Location desktop
-      try {
-        Invoke-NativeCommand npm run typecheck
-      } finally {
-        Pop-Location
-      }
-
-      .\scripts\build-sidecar.ps1
-
-      Push-Location desktop
-      try {
-        Invoke-NativeCommand npm run dist:win
-      } finally {
-        Pop-Location
-      }
+  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
+  - cmd: cd desktop && npm run typecheck
+  - cmd: powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-sidecar.ps1
+  - cmd: cd desktop && npm run dist:win
 
 artifacts:
   - path: dist\desktop\*.exe
