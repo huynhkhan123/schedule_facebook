@@ -105,7 +105,7 @@ export function App() {
             <h2>Kết nối với dashboard</h2>
             <p className="muted">
               Tạo mã tại dashboard rồi nhập vào đây. Server mặc định:
-              <span className="mono server-url"> https://schedule.bookinghome.one</span>
+              <span className="mono server-url"> https://api.schedule.bookinghome.one</span>
             </p>
           </div>
 

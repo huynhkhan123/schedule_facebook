@@ -34,7 +34,7 @@ export default async function ConnectorsPage() {
           <pre className="overflow-x-auto rounded-octo bg-octo-background p-3 font-mono text-xs text-octo-text-primary">
 {`python3 -m uv run facebook-group-connector pair \\
   --code <CODE> \\
-  --server https://schedule.bookinghome.one
+  --server https://api.schedule.bookinghome.one
 
 python3 -m uv run facebook-group-connector run`}
           </pre>

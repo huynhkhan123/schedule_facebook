@@ -10,7 +10,7 @@ from facebook_group_tool.connector.core import ConnectorCore
 from facebook_group_tool.connector.main import DEFAULT_CONFIG_PATH, DEFAULT_PROFILE_PATH
 from facebook_group_tool.connector.token_store import ConnectorTokenStore
 
-DEFAULT_SERVER_URL = "https://schedule.bookinghome.one"
+DEFAULT_SERVER_URL = "https://api.schedule.bookinghome.one"
 SENSITIVE_PAYLOAD_KEYS = frozenset({"token", "access_token", "refresh_token", "secret"})
 
 

@@ -36,9 +36,9 @@ class FakeAsyncClient:
 
 
 def test_websocket_url_converts_https_server_to_wss() -> None:
-    url = websocket_url("https://schedule.bookinghome.one/", "abc", "token")
+    url = websocket_url("https://api.schedule.bookinghome.one/", "abc", "token")
 
-    assert url == "wss://schedule.bookinghome.one/api/connectors/ws/abc?token=token"
+    assert url == "wss://api.schedule.bookinghome.one/api/connectors/ws/abc?token=token"
 
 
 def test_websocket_url_converts_http_server_to_ws() -> None:
@@ -63,13 +63,13 @@ async def test_connector_core_pair_posts_expected_payload_and_saves_config(
 
     config = await core.pair(
         code="ABC123",
-        server_url="https://schedule.bookinghome.one",
+        server_url="https://api.schedule.bookinghome.one",
         machine_name="Support Mac",
         platform_name="darwin-arm64",
     )
 
     assert config == ConnectorConfig(
-        server_url="https://schedule.bookinghome.one",
+        server_url="https://api.schedule.bookinghome.one",
         connector_id="connector-123",
         token="secret-token",
         browser_profile_path=str(profile_path),
@@ -77,7 +77,7 @@ async def test_connector_core_pair_posts_expected_payload_and_saves_config(
     assert ConnectorTokenStore(config_path).load() == config
     assert FakeAsyncClient.instances[0].posts == [
         {
-            "url": "https://schedule.bookinghome.one/api/connectors/pair",
+            "url": "https://api.schedule.bookinghome.one/api/connectors/pair",
             "json": {
                 "code": "ABC123",
                 "machine_name": "Support Mac",

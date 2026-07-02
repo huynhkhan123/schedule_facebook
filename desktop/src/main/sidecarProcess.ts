@@ -20,7 +20,7 @@ export interface ConnectorState {
   errorMessage: string
 }
 
-const DEFAULT_SERVER_URL = 'https://schedule.bookinghome.one'
+const DEFAULT_SERVER_URL = 'https://api.schedule.bookinghome.one'
 const MAX_LOG_LINES = 200
 
 export class SidecarProcessManager extends EventEmitter {

@@ -58,7 +58,7 @@ npm run test:e2e
 
 ## Desktop connector app
 
-The customer desktop app lives in `desktop/`. It uses Electron for the native shell and a packaged Python sidecar for the connector runtime.
+The customer desktop app lives in `desktop/`. It uses Electron for the native shell and a packaged Python sidecar for the connector runtime. The dashboard stays at `https://schedule.bookinghome.one`, while the connector sidecar pairs and opens WebSockets against the FastAPI backend at `https://api.schedule.bookinghome.one`.
 
 Local unsigned development build:
 

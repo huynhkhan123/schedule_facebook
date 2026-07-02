@@ -2,7 +2,15 @@ import json
 from pathlib import Path
 
 from facebook_group_tool.connector.config import ConnectorConfig
-from facebook_group_tool.connector.sidecar import SidecarEventWriter, config_to_public_payload
+from facebook_group_tool.connector.sidecar import (
+    DEFAULT_SERVER_URL,
+    SidecarEventWriter,
+    config_to_public_payload,
+)
+
+
+def test_sidecar_default_server_url_uses_public_backend_api_domain() -> None:
+    assert DEFAULT_SERVER_URL == "https://api.schedule.bookinghome.one"
 
 
 def test_sidecar_event_writer_outputs_json_line_without_token(tmp_path: Path) -> None:
