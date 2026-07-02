@@ -8,46 +8,75 @@ branches:
 
 environment:
   PYTHON_VERSION: "3.12"
-  NODE_VERSION: "24"
   DESKTOP_UPDATE_FEED_URL: "https://schedule.bookinghome.one/downloads/desktop"
 
 install:
   - ps: |
-      $ErrorActionPreference = "Stop"
+      $ErrorActionPreference = "Continue"
+
+      function Invoke-NativeCommand {
+        param(
+          [Parameter(Mandatory = $true)][string]$FilePath,
+          [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
+        )
+
+        & $FilePath @Arguments
+        if ($LASTEXITCODE -ne 0) {
+          throw "$FilePath exited with code $LASTEXITCODE"
+        }
+      }
+
       irm https://astral.sh/uv/install.ps1 | iex
       $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
-      uv --version
-  - ps: |
-      $ErrorActionPreference = "Stop"
-      node --version
-      npm --version
-  - ps: |
-      $ErrorActionPreference = "Stop"
-      uv python install $env:PYTHON_VERSION
-      uv sync --all-groups --frozen
-  - ps: |
-      $ErrorActionPreference = "Stop"
+
+      Invoke-NativeCommand uv --version
+      Invoke-NativeCommand node --version
+      Invoke-NativeCommand npm --version
+      Invoke-NativeCommand uv python install $env:PYTHON_VERSION
+      Invoke-NativeCommand uv sync --all-groups --frozen
+
       Push-Location desktop
-      npm ci
-      Pop-Location
+      try {
+        Invoke-NativeCommand npm ci
+      } finally {
+        Pop-Location
+      }
 
 build_script:
   - ps: |
-      $ErrorActionPreference = "Stop"
-      uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
-  - ps: |
-      $ErrorActionPreference = "Stop"
+      $ErrorActionPreference = "Continue"
+
+      function Invoke-NativeCommand {
+        param(
+          [Parameter(Mandatory = $true)][string]$FilePath,
+          [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
+        )
+
+        & $FilePath @Arguments
+        if ($LASTEXITCODE -ne 0) {
+          throw "$FilePath exited with code $LASTEXITCODE"
+        }
+      }
+
+      Invoke-NativeCommand uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
+
       Push-Location desktop
-      npm run typecheck
-      Pop-Location
-  - ps: |
+      try {
+        Invoke-NativeCommand npm run typecheck
+      } finally {
+        Pop-Location
+      }
+
       $ErrorActionPreference = "Stop"
       .\scripts\build-sidecar.ps1
-  - ps: |
-      $ErrorActionPreference = "Stop"
+      $ErrorActionPreference = "Continue"
+
       Push-Location desktop
-      npm run dist:win
-      Pop-Location
+      try {
+        Invoke-NativeCommand npm run dist:win
+      } finally {
+        Pop-Location
+      }
 
 artifacts:
   - path: dist\desktop\*.exe
