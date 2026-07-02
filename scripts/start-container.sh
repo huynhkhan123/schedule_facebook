@@ -15,8 +15,8 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
   alembic -c alembic.ini upgrade head
 fi
 
-echo "🚀 Starting FastAPI backend on 127.0.0.1:8000..."
-uvicorn facebook_group_tool.main:app --host 127.0.0.1 --port 8000 &
+echo "🚀 Starting FastAPI backend on 0.0.0.0:8000..."
+uvicorn facebook_group_tool.main:app --host 0.0.0.0 --port 8000 &
 BACKEND_PID=$!
 
 echo "🌐 Starting Next.js admin on 0.0.0.0:${PORT}..."

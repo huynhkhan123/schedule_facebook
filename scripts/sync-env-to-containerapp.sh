@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 
 ENV_FILE="${ENV_FILE:-.env}"
 RG="${RG:-campaign-rg}"
-CONTAINER_APP="${CONTAINER_APP:-facebook-scheduler-cca}"
+CONTAINER_APP="${CONTAINER_APP:-api-facebook-schedule-cca}"
 
 if ! command -v az >/dev/null 2>&1; then
   echo "❌ Missing required command: az"
