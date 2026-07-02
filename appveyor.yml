@@ -145,7 +145,7 @@ deploy_script:
         }
 
         $encodedName = [System.Uri]::EscapeDataString($asset.Name)
-        $uploadUri = "$uploadBase?name=$encodedName"
+        $uploadUri = "${uploadBase}?name=$encodedName"
         Write-Host "Uploading $($asset.Name)..."
         Invoke-WebRequest `
           -Method Post `
