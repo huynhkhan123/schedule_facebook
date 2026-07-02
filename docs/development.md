@@ -99,20 +99,19 @@ The Windows output is written under `dist/desktop/` and should include an NSIS i
 
 Windows customer testing uses unsigned NSIS builds published to GitHub Releases. Customers may see Windows SmartScreen or Unknown Publisher warnings until a paid code-signing certificate is added.
 
-Release a new Windows desktop build:
+Release a new Windows desktop build from a clean working tree:
 
 ```bash
-cd desktop
-npm version patch --no-git-tag-version
-VERSION=$(node -p "require('./package.json').version")
-cd ..
-
-git add desktop/package.json desktop/package-lock.json
-git commit -m "chore: release desktop ${VERSION}"
-git tag "desktop-v${VERSION}"
-git push origin main
-git push origin "desktop-v${VERSION}"
+./scripts/release-desktop-update.sh
 ```
+
+Release an explicit version:
+
+```bash
+./scripts/release-desktop-update.sh 0.2.0
+```
+
+The script bumps `desktop/package.json`, commits `desktop/package.json` and `desktop/package-lock.json`, creates `desktop-v<version>`, and pushes `main` plus the tag.
 
 If GitHub Actions is available, the `desktop-v*` tag starts `.github/workflows/build-desktop-windows.yml`, builds the Windows sidecar and unsigned Electron installer, then uploads release assets.
 
