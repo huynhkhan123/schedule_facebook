@@ -4,6 +4,19 @@ $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
 $ResourceDir = Join-Path $RootDir "desktop\resources\sidecar"
 $BrowserResourceDir = Join-Path $RootDir "desktop\resources\ms-playwright"
 
+function Invoke-NativeCommand {
+  param(
+    [Parameter(Mandatory = $true)][string]$FilePath,
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
+  )
+
+  & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
+  $ExitCode = $LASTEXITCODE
+  if ($ExitCode -ne 0) {
+    throw "$FilePath exited with code $ExitCode"
+  }
+}
+
 foreach ($Path in @($ResourceDir, $BrowserResourceDir)) {
   if (Test-Path $Path) {
     Remove-Item -Recurse -Force $Path
@@ -24,9 +37,9 @@ function Invoke-ProjectPython {
   param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
 
   if ($UseUv) {
-    & uv run python @Arguments
+    Invoke-NativeCommand uv run python @Arguments
   } else {
-    & $VenvPython @Arguments
+    Invoke-NativeCommand $VenvPython @Arguments
   }
 }
 
@@ -34,22 +47,16 @@ function Invoke-ProjectPyInstaller {
   param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
 
   if ($UseUv) {
-    & uv run pyinstaller @Arguments
+    Invoke-NativeCommand uv run pyinstaller @Arguments
   } else {
-    & $VenvPython -m PyInstaller @Arguments
+    Invoke-NativeCommand $VenvPython -m PyInstaller @Arguments
   }
 }
 
 Invoke-ProjectPython -m playwright install chromium
-if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
-}
 
 $RemovePackageBrowsersScript = "from pathlib import Path; import shutil; import playwright; package_browsers = Path(playwright.__file__).parent / 'driver' / 'package' / '.local-browsers'; shutil.rmtree(package_browsers) if package_browsers.exists() else None"
 Invoke-ProjectPython -c $RemovePackageBrowsersScript
-if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
-}
 
 Invoke-ProjectPyInstaller `
   --clean `
@@ -60,9 +67,6 @@ Invoke-ProjectPyInstaller `
   --workpath (Join-Path $RootDir "build\pyinstaller") `
   --specpath (Join-Path $RootDir "build\pyinstaller") `
   (Join-Path $RootDir "src\facebook_group_tool\connector\sidecar.py")
-if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
-}
 
 $SidecarExe = Join-Path $ResourceDir "facebook-group-connector-sidecar.exe"
 if (-not (Test-Path $SidecarExe)) {

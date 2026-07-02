@@ -12,7 +12,7 @@ environment:
 
 install:
   - ps: |
-      $ErrorActionPreference = "Continue"
+      $ErrorActionPreference = "Stop"
 
       function Invoke-NativeCommand {
         param(
@@ -20,9 +20,10 @@ install:
           [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
         )
 
-        & $FilePath @Arguments
-        if ($LASTEXITCODE -ne 0) {
-          throw "$FilePath exited with code $LASTEXITCODE"
+        & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
+        $ExitCode = $LASTEXITCODE
+        if ($ExitCode -ne 0) {
+          throw "$FilePath exited with code $ExitCode"
         }
       }
 
@@ -44,7 +45,7 @@ install:
 
 build_script:
   - ps: |
-      $ErrorActionPreference = "Continue"
+      $ErrorActionPreference = "Stop"
 
       function Invoke-NativeCommand {
         param(
@@ -52,9 +53,10 @@ build_script:
           [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
         )
 
-        & $FilePath @Arguments
-        if ($LASTEXITCODE -ne 0) {
-          throw "$FilePath exited with code $LASTEXITCODE"
+        & $FilePath @Arguments 2>&1 | ForEach-Object { Write-Host $_ }
+        $ExitCode = $LASTEXITCODE
+        if ($ExitCode -ne 0) {
+          throw "$FilePath exited with code $ExitCode"
         }
       }
 
@@ -67,9 +69,7 @@ build_script:
         Pop-Location
       }
 
-      $ErrorActionPreference = "Stop"
       .\scripts\build-sidecar.ps1
-      $ErrorActionPreference = "Continue"
 
       Push-Location desktop
       try {
