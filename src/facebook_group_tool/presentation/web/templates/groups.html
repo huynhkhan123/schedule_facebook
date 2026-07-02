@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <p class="eyebrow">Human-in-the-loop sync</p>
+  <h2>Groups</h2>
+  <p>Click Start sync to open a dedicated browser profile on your Facebook groups page. Scroll in that opened browser, then click Collect visible groups.</p>
+  <div class="button-row" role="group" aria-label="Group sync controls">
+    <button type="button" data-action="start-sync">Start sync</button>
+    <button type="button" data-action="collect-visible">Collect visible groups</button>
+    <button type="button" data-action="stop-sync">Stop sync</button>
+  </div>
+  <p id="sync-status" class="status-line">Status: idle</p>
+</section>
+
+<section class="panel" aria-labelledby="groups-table-heading">
+  <h2 id="groups-table-heading">Synced groups</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>URL</th>
+          <th>Enabled</th>
+          <th>Posting allowed</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for group in groups %}
+        <tr>
+          <td>{{ group.name }}</td>
+          <td><a href="{{ group.url }}" target="_blank" rel="noreferrer">Open</a></td>
+          <td>{{ "Yes" if group.is_enabled else "No" }}</td>
+          <td>{{ "Yes" if group.is_posting_allowed else "No" }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4">No groups synced yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

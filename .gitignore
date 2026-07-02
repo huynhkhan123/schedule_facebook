@@ -1,0 +1,38 @@
+# Local secrets
+.env
+
+# Python-generated files
+__pycache__/
+*.py[cod]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.pyright/
+.coverage
+htmlcov/
+
+# Frontend dependencies and builds
+node_modules/
+.next/
+*.tsbuildinfo
+playwright-report/
+test-results/
+frontend/.env.local
+
+# Desktop packaging resources
+/desktop/resources/sidecar/
+/desktop/resources/ms-playwright/
+
+# Local runtime data
+var/
+
+# macOS
+.DS_Store

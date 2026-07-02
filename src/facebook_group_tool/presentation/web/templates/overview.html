@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="hero-panel" aria-labelledby="overview-heading">
+  <div>
+    <p class="eyebrow">Overview</p>
+    <h2 id="overview-heading">Operate campaigns with hard safety guardrails.</h2>
+    <p>Use auto mode only for small allowed group sets. Use semi-auto when scale or review matters.</p>
+  </div>
+  <aside class="safety-card">
+    <strong>Safety boundary</strong>
+    <span>No credentials, no bypass, no auto-join, no detection evasion.</span>
+  </aside>
+</section>
+<section class="operations-grid" aria-label="Dashboard metrics">
+  <article><span>Synced groups</span><strong>{{ synced_groups }}</strong></article>
+  <article><span>Active campaigns</span><strong>{{ active_campaigns }}</strong></article>
+  <article><span>Auto posts used today</span><strong>{{ auto_posts_used_today }}</strong></article>
+  <article><span>Needs user action</span><strong>{{ needs_user_action }}</strong></article>
+</section>
+<section class="panel" aria-labelledby="logs-heading">
+  <h2 id="logs-heading">Recent run logs</h2>
+  <p>No run logs yet.</p>
+</section>
+{% endblock %}

@@ -1,0 +1,72 @@
+name: Build Windows Desktop Connector
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "desktop-v*"
+
+jobs:
+  build-windows:
+    name: Build Windows x64 installer
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    env:
+      DESKTOP_UPDATE_FEED_URL: ${{ vars.DESKTOP_UPDATE_FEED_URL }}
+      WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+      WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.11.26"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync Python dependencies
+        run: uv sync --all-groups --frozen
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Type-check desktop app
+        working-directory: desktop
+        run: npm run typecheck
+
+      - name: Run connector unit tests
+        run: uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
+
+      - name: Build Windows sidecar
+        shell: pwsh
+        run: .\scripts\build-sidecar.ps1
+
+      - name: Build Windows installer
+        working-directory: desktop
+        shell: pwsh
+        run: npm run dist:win
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: facebook-group-connector-windows-x64
+          path: |
+            dist/desktop/*.exe
+            dist/desktop/*.blockmap
+            dist/desktop/latest.yml
+          if-no-files-found: error

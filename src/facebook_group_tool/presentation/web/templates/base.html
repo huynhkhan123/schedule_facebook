@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Facebook Group Tool{% endblock %}</title>
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <header class="shell-header">
+      <p class="eyebrow">Local safety-first dashboard</p>
+      <h1>Facebook Group Tool</h1>
+      <nav aria-label="Main navigation">
+        <a href="/">Overview</a>
+        <a href="/groups">Groups</a>
+        <a href="/posts">Posts</a>
+        <a href="/campaigns">Campaigns</a>
+        <a href="/logs">Run Logs</a>
+      </nav>
+    </header>
+    <main class="shell-main">
+      {% block content %}{% endblock %}
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

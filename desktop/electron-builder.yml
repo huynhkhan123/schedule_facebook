@@ -1,0 +1,44 @@
+appId: one.bookinghome.facebook-group-connector
+productName: Facebook Group Connector
+directories:
+  output: ../dist/desktop
+files:
+  - dist/**/*
+  - package.json
+extraResources:
+  - from: resources/sidecar
+    to: sidecar
+    filter:
+      - '**/*'
+  - from: resources/ms-playwright
+    to: ms-playwright
+    filter:
+      - '**/*'
+mac:
+  category: public.app-category.business
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+    - target: zip
+      arch:
+        - arm64
+        - x64
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  notarize: true
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+publish:
+  provider: generic
+  url: ${env.DESKTOP_UPDATE_FEED_URL}
