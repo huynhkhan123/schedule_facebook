@@ -15,10 +15,6 @@ environment:
 install:
   - ps: |
       $ErrorActionPreference = "Stop"
-      if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-        choco install gh -y
-        $env:Path = "C:\Program Files\GitHub CLI;$env:Path"
-      }
       if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
         irm https://astral.sh/uv/install.ps1 | iex
         $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
@@ -81,26 +77,66 @@ deploy_script:
         throw "Tag $tag does not match desktop/package.json version $version. Expected $expectedTag."
       }
 
-      $env:GH_TOKEN | gh auth login --with-token
-
-      $releaseExists = $true
-      gh release view $tag --repo $repo *> $null
-      if ($LASTEXITCODE -ne 0) {
-        $releaseExists = $false
+      $headers = @{
+        Authorization = "Bearer $env:GH_TOKEN"
+        Accept = "application/vnd.github+json"
+        "X-GitHub-Api-Version" = "2022-11-28"
+        "User-Agent" = "appveyor-facebook-group-connector-release"
       }
-      if (-not $releaseExists) {
-        gh release create $tag `
-          --repo $repo `
-          --title "Facebook Group Connector $version" `
-          --notes "Windows unsigned test release $version. Customers may see Windows SmartScreen / Unknown Publisher warnings."
+      $apiBase = "https://api.github.com/repos/$repo"
+
+      function Invoke-GitHubJson {
+        param(
+          [string]$Method,
+          [string]$Uri,
+          [object]$Body = $null
+        )
+
+        $parameters = @{
+          Method = $Method
+          Uri = $Uri
+          Headers = $headers
+        }
+        if ($null -ne $Body) {
+          $parameters.ContentType = "application/json"
+          $parameters.Body = ($Body | ConvertTo-Json -Depth 10)
+        }
+        return Invoke-RestMethod @parameters
+      }
+
+      function Get-GitHubRelease {
+        param([string]$ReleaseTag)
+
+        try {
+          return Invoke-GitHubJson -Method Get -Uri "$apiBase/releases/tags/$ReleaseTag"
+        } catch {
+          if ($_.Exception.Response.StatusCode.value__ -eq 404) {
+            return $null
+          }
+          throw
+        }
+      }
+
+      $release = Get-GitHubRelease -ReleaseTag $tag
+      if ($null -eq $release) {
+        Write-Host "Creating GitHub Release $tag..."
+        $release = Invoke-GitHubJson -Method Post -Uri "$apiBase/releases" -Body @{
+          tag_name = $tag
+          name = "Facebook Group Connector $version"
+          body = "Windows unsigned test release $version. Customers may see Windows SmartScreen / Unknown Publisher warnings."
+          draft = $false
+          prerelease = $false
+        }
+      } else {
+        Write-Host "GitHub Release $tag already exists; assets will be replaced."
       }
 
       $assets = @()
-      $assets += Get-ChildItem -Path "dist\desktop" -Filter "*.exe" -File | ForEach-Object { $_.FullName }
-      $assets += Get-ChildItem -Path "dist\desktop" -Filter "*.exe.blockmap" -File | ForEach-Object { $_.FullName }
+      $assets += Get-ChildItem -Path "dist\desktop" -Filter "*.exe" -File
+      $assets += Get-ChildItem -Path "dist\desktop" -Filter "*.exe.blockmap" -File
       $latestYml = Join-Path "dist\desktop" "latest.yml"
       if (Test-Path $latestYml) {
-        $assets += (Resolve-Path $latestYml).Path
+        $assets += Get-Item $latestYml
       }
       if ($assets.Count -eq 0) {
         throw "No release assets found in dist\desktop."
@@ -109,5 +145,24 @@ deploy_script:
         throw "Missing latest.yml. electron-updater requires this metadata file."
       }
 
-      gh release upload $tag --repo $repo --clobber @assets
+      $uploadBase = $release.upload_url -replace "\{\?name,label\}", ""
+      foreach ($asset in $assets) {
+        $existingAsset = $release.assets | Where-Object { $_.name -eq $asset.Name } | Select-Object -First 1
+        if ($null -ne $existingAsset) {
+          Write-Host "Deleting existing release asset $($asset.Name)..."
+          Invoke-GitHubJson -Method Delete -Uri "$apiBase/releases/assets/$($existingAsset.id)" | Out-Null
+        }
+
+        $encodedName = [System.Uri]::EscapeDataString($asset.Name)
+        $uploadUri = "$uploadBase?name=$encodedName"
+        Write-Host "Uploading $($asset.Name)..."
+        Invoke-WebRequest `
+          -Method Post `
+          -Uri $uploadUri `
+          -Headers $headers `
+          -ContentType "application/octet-stream" `
+          -InFile $asset.FullName `
+          -UseBasicParsing | Out-Null
+      }
+
       Write-Host "Uploaded Windows desktop release assets to https://github.com/$repo/releases/tag/$tag"
