@@ -114,7 +114,20 @@ git push origin main
 git push origin "desktop-v${VERSION}"
 ```
 
-The `desktop-v*` tag starts `.github/workflows/build-desktop-windows.yml`, builds the Windows sidecar and unsigned Electron installer, then uploads these release assets:
+If GitHub Actions is available, the `desktop-v*` tag starts `.github/workflows/build-desktop-windows.yml`, builds the Windows sidecar and unsigned Electron installer, then uploads release assets.
+
+If GitHub Actions is blocked by account billing, run the release from a Windows machine instead:
+
+```powershell
+# Requires: git, gh, node, npm, uv
+# First authenticate once:
+gh auth login
+
+# After the version commit and desktop-v* tag exist:
+.\scripts\release-desktop-windows.ps1
+```
+
+Both paths upload these GitHub Release assets:
 
 - `*.exe` — installer for first-time customer install
 - `*.exe.blockmap` — differential update data
