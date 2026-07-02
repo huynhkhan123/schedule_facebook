@@ -25,11 +25,18 @@
   box-sizing: border-box;
 }
 
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   min-width: 720px;
   min-height: 560px;
   margin: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background:
     radial-gradient(circle at 18% 12%, rgba(47, 129, 247, 0.28), transparent 28rem),
     radial-gradient(circle at 82% 0%, rgba(63, 185, 80, 0.2), transparent 24rem),
@@ -52,6 +59,7 @@ button {
   flex-direction: column;
   gap: 18px;
   padding: 34px;
+  overflow: visible;
 }
 
 .app-shell::before {
@@ -277,6 +285,12 @@ button:disabled {
 
 .log-panel {
   min-height: 210px;
+}
+
+.log-panel .log-list {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .log-header {
