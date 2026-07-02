@@ -13,22 +13,13 @@ environment:
   PYTHON_VERSION: "3.12"
 
 install:
-  - ps: |
-      $ErrorActionPreference = "Stop"
-      if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
-        irm https://astral.sh/uv/install.ps1 | iex
-        $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
-      }
-      uv --version
-      node --version
-      npm --version
-      uv python install $env:PYTHON_VERSION
-      uv sync --all-groups --frozen
-  - ps: |
-      $ErrorActionPreference = "Stop"
-      Set-Location desktop
-      npm ci
-      Set-Location ..
+  - cmd: powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv --version
+  - cmd: node --version
+  - cmd: npm --version
+  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv python install %PYTHON_VERSION%
+  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv sync --all-groups --frozen
+  - cmd: cd desktop && npm ci
 
 build_script:
   - ps: |
