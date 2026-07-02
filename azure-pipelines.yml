@@ -1,0 +1,79 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr: none
+
+pool:
+  vmImage: windows-latest
+
+variables:
+  PYTHON_VERSION: '3.12'
+  NODE_VERSION: '24.x'
+  DESKTOP_UPDATE_FEED_URL: 'https://schedule.bookinghome.one/downloads/desktop'
+
+steps:
+  - checkout: self
+    clean: true
+
+  - powershell: |
+      $ErrorActionPreference = 'Stop'
+      irm https://astral.sh/uv/install.ps1 | iex
+      $uvBin = Join-Path $env:USERPROFILE '.local\bin'
+      Write-Host "##vso[task.prependpath]$uvBin"
+      & "$uvBin\uv.exe" --version
+    displayName: Install uv
+
+  - task: NodeTool@0
+    displayName: Install Node.js
+    inputs:
+      versionSpec: $(NODE_VERSION)
+
+  - powershell: |
+      $ErrorActionPreference = 'Stop'
+      uv python install $(PYTHON_VERSION)
+      uv sync --all-groups --frozen
+    displayName: Sync Python dependencies
+
+  - powershell: |
+      $ErrorActionPreference = 'Stop'
+      Push-Location desktop
+      npm ci
+      Pop-Location
+    displayName: Install desktop dependencies
+
+  - powershell: |
+      $ErrorActionPreference = 'Stop'
+      uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
+    displayName: Run connector unit tests
+
+  - powershell: |
+      $ErrorActionPreference = 'Stop'
+      Push-Location desktop
+      npm run typecheck
+      Pop-Location
+    displayName: Type-check desktop app
+
+  - powershell: |
+      $ErrorActionPreference = 'Stop'
+      .\scripts\build-sidecar.ps1
+    displayName: Build Windows sidecar
+
+  - powershell: |
+      $ErrorActionPreference = 'Stop'
+      Push-Location desktop
+      npm run dist:win
+      Pop-Location
+    displayName: Build Windows installer
+    env:
+      DESKTOP_UPDATE_FEED_URL: $(DESKTOP_UPDATE_FEED_URL)
+      WIN_CSC_LINK: $(WIN_CSC_LINK)
+      WIN_CSC_KEY_PASSWORD: $(WIN_CSC_KEY_PASSWORD)
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Windows installer artifacts
+    inputs:
+      PathtoPublish: dist\desktop
+      ArtifactName: facebook-group-connector-windows-x64
+      publishLocation: Container
