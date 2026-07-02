@@ -19,7 +19,6 @@ install:
       uv --version
   - ps: |
       $ErrorActionPreference = "Stop"
-      Install-Product node $env:NODE_VERSION x64
       node --version
       npm --version
   - ps: |
