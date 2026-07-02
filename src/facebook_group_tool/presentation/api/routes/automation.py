@@ -1,25 +1,41 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
-from facebook_group_tool.application.dto import SyncedGroupInput
-from facebook_group_tool.application.use_cases.sync_groups import SyncGroupsUseCase
-from facebook_group_tool.infrastructure.automation.group_sync_session import (
-    GroupSyncSessionService,
+from facebook_group_tool.application.use_cases.dispatch_connector_job import (
+    DispatchConnectorJobUseCase,
 )
-from facebook_group_tool.presentation.api.dependencies import (
-    get_group_sync_session,
-    get_sync_groups_use_case,
-)
+from facebook_group_tool.presentation.api.dependencies import get_dispatch_connector_job_use_case
+from facebook_group_tool.presentation.api.routes.connectors import notify_connector_job_available
 
 router = APIRouter()
 
-GroupSyncSessionDependency = Annotated[GroupSyncSessionService, Depends(get_group_sync_session)]
-SyncGroupsDependency = Annotated[SyncGroupsUseCase, Depends(get_sync_groups_use_case)]
+DispatchConnectorJobDependency = Annotated[
+    DispatchConnectorJobUseCase,
+    Depends(get_dispatch_connector_job_use_case),
+]
 
 
-def sync_response(status: str, synced_count: int, message: str = "") -> dict[str, object]:
-    return {"status": status, "synced_count": synced_count, "message": message}
+def sync_response(
+    status: str,
+    synced_count: int,
+    message: str = "",
+    **extra: object,
+) -> dict[str, object]:
+    return {"status": status, "synced_count": synced_count, "message": message, **extra}
+
+
+async def dispatch_group_sync_job(
+    use_case: DispatchConnectorJobDependency,
+    job_type: str,
+    message: str,
+) -> dict[str, object]:
+    try:
+        job = await use_case.execute(job_type=job_type, payload={})
+    except RuntimeError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    await notify_connector_job_available(job)
+    return sync_response("syncing_visible_groups", 0, message, job_id=str(job.id))
 
 
 @router.get("/status")
@@ -28,44 +44,38 @@ async def automation_status() -> dict[str, str]:
 
 
 @router.get("/group-sync/status")
-async def group_sync_status(
-    session: GroupSyncSessionDependency,
-) -> dict[str, object]:
-    status = session.status()
-    return sync_response(status.status, status.synced_count, status.message)
+async def group_sync_status() -> dict[str, object]:
+    return sync_response("idle", 0)
 
 
 @router.post("/group-sync/start")
 async def start_group_sync(
-    session: GroupSyncSessionDependency,
+    use_case: DispatchConnectorJobDependency,
 ) -> dict[str, object]:
-    status = await session.start()
-    return sync_response(status.status, status.synced_count, status.message)
+    return await dispatch_group_sync_job(
+        use_case,
+        "group_sync.start",
+        "Đã gửi lệnh mở browser xuống desktop connector.",
+    )
 
 
 @router.post("/group-sync/collect-visible")
 async def collect_visible_groups(
-    session: GroupSyncSessionDependency,
-    sync_groups: SyncGroupsDependency,
+    use_case: DispatchConnectorJobDependency,
 ) -> dict[str, object]:
-    status, visible_groups = await session.collect_visible_groups()
-    synced = await sync_groups.execute(
-        [
-            SyncedGroupInput(
-                name=group.name,
-                url=group.url,
-                facebook_group_id=group.facebook_group_id,
-                cover_image_url=group.cover_image_url,
-            )
-            for group in visible_groups
-        ]
+    return await dispatch_group_sync_job(
+        use_case,
+        "group_sync.collect_visible",
+        "Đã gửi lệnh thu thập nhóm đang hiển thị xuống desktop connector.",
     )
-    return sync_response(status.status, len(synced), status.message)
 
 
 @router.post("/group-sync/stop")
 async def stop_group_sync(
-    session: GroupSyncSessionDependency,
+    use_case: DispatchConnectorJobDependency,
 ) -> dict[str, object]:
-    status = await session.stop()
-    return sync_response(status.status, status.synced_count, status.message)
+    return await dispatch_group_sync_job(
+        use_case,
+        "group_sync.stop",
+        "Đã gửi lệnh dừng sync xuống desktop connector.",
+    )

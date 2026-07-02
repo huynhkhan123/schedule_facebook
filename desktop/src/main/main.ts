@@ -89,6 +89,7 @@ function createMainWindow(): BrowserWindow {
 }
 
 function configureIpc(): void {
+  ipcMain.handle('app:getVersion', () => app.getVersion())
   ipcMain.handle('connector:getState', () => sidecar.getState())
   ipcMain.handle('connector:pair', async (_event, code: string) => sidecar.pairConnector(code))
   ipcMain.handle('connector:start', () => sidecar.startConnector())

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/admin/Button'
+import { getPublicBackendApiUrl } from '@/lib/api/client'
 import type { PairingCodeResponse } from '@/lib/api/types'
 
 export function PairingCodeButton() {
@@ -13,7 +14,9 @@ export function PairingCodeButton() {
     setError('')
     setIsLoading(true)
     try {
-      const response = await fetch('/api/backend/connectors/pairing-codes', { method: 'POST' })
+      const response = await fetch(getPublicBackendApiUrl('/api/connectors/pairing-codes'), {
+        method: 'POST',
+      })
       if (!response.ok) {
         throw new Error('Không tạo được mã kết nối')
       }

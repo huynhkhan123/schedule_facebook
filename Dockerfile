@@ -7,7 +7,9 @@ RUN npm ci
 
 FROM node:26-bookworm-slim AS frontend-builder
 WORKDIR /app/frontend
-ENV NEXT_TELEMETRY_DISABLED=1
+ARG NEXT_PUBLIC_FASTAPI_BASE_URL=https://api.schedule.bookinghome.one
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_FASTAPI_BASE_URL=${NEXT_PUBLIC_FASTAPI_BASE_URL}
 COPY --from=frontend-deps /app/frontend/node_modules ./node_modules
 COPY frontend ./
 RUN npm run build

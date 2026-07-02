@@ -93,13 +93,39 @@ cd ..
 .\scripts\build-desktop.ps1
 ```
 
-The Windows output is written under `dist/desktop/` and should include an NSIS installer for `Facebook Group Connector`. The same process is automated by `.github/workflows/build-desktop-windows.yml`; run it with GitHub Actions `workflow_dispatch` after adding signing secrets.
+The Windows output is written under `dist/desktop/` and should include an NSIS installer for `Facebook Group Connector` plus `latest.yml` update metadata. The same process is automated by `.github/workflows/build-desktop-windows.yml`.
 
-Customer builds must be signed. Provide signing credentials through CI/local environment variables or secret stores only:
+### Windows unsigned auto-update releases
+
+Windows customer testing uses unsigned NSIS builds published to GitHub Releases. Customers may see Windows SmartScreen or Unknown Publisher warnings until a paid code-signing certificate is added.
+
+Release a new Windows desktop build:
+
+```bash
+cd desktop
+npm version patch --no-git-tag-version
+VERSION=$(node -p "require('./package.json').version")
+cd ..
+
+git add desktop/package.json desktop/package-lock.json
+git commit -m "chore: release desktop ${VERSION}"
+git tag "desktop-v${VERSION}"
+git push origin main
+git push origin "desktop-v${VERSION}"
+```
+
+The `desktop-v*` tag starts `.github/workflows/build-desktop-windows.yml`, builds the Windows sidecar and unsigned Electron installer, then uploads these release assets:
+
+- `*.exe` — installer for first-time customer install
+- `*.exe.blockmap` — differential update data
+- `latest.yml` — `electron-updater` metadata
+
+Customers install the `.exe` once. Future versions are delivered by the desktop app through **Check for updates** or the startup auto-check.
+
+Customer builds should be signed before broad production distribution. Provide signing credentials through CI/local environment variables or secret stores only:
 
 - macOS: `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
-- Windows: `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`
-- Auto-update feed: `DESKTOP_UPDATE_FEED_URL`
+- Windows later: `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`
 
 Do not commit signing certificates, passwords, API keys, or update feed credentials.
 

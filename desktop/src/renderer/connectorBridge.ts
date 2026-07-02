@@ -14,14 +14,31 @@ export interface ConnectorState {
   errorMessage: string
 }
 
+export type UpdaterStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not_available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
+
+export interface UpdaterEvent {
+  status: UpdaterStatus
+  message: string
+  version?: string
+  percent?: number
+}
+
 export interface ConnectorBridge {
+  getAppVersion: () => Promise<string>
   getState: () => Promise<ConnectorState>
   pairConnector: (code: string) => Promise<ConnectorState>
   startConnector: () => Promise<ConnectorState>
   stopConnector: () => Promise<ConnectorState>
   checkForUpdates: () => Promise<void>
   onState: (callback: (state: ConnectorState) => void) => () => void
-  onUpdaterEvent: (callback: (message: string) => void) => () => void
+  onUpdaterEvent: (callback: (event: UpdaterEvent) => void) => () => void
 }
 
 declare global {

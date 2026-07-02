@@ -1,11 +1,16 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import type { ConnectorState, ConnectorStatus, SidecarEvent } from './connectorBridge'
+import type { ConnectorState, ConnectorStatus, SidecarEvent, UpdaterEvent } from './connectorBridge'
 
 const INITIAL_STATE: ConnectorState = {
   status: 'offline',
   logs: [],
   isPaired: false,
   errorMessage: '',
+}
+
+const INITIAL_UPDATER_EVENT: UpdaterEvent = {
+  status: 'idle',
+  message: 'Chưa kiểm tra cập nhật.',
 }
 
 const STATUS_LABELS: Record<ConnectorStatus, string> = {
@@ -20,16 +25,25 @@ const STATUS_LABELS: Record<ConnectorStatus, string> = {
 export function App() {
   const [pairingCode, setPairingCode] = useState('')
   const [state, setState] = useState<ConnectorState>(INITIAL_STATE)
+  const [appVersion, setAppVersion] = useState('0.0.0')
+  const [updaterEvent, setUpdaterEvent] = useState<UpdaterEvent>(INITIAL_UPDATER_EVENT)
   const [isBusy, setIsBusy] = useState(false)
 
   useEffect(() => {
+    void window.connector.getAppVersion().then(setAppVersion)
     void window.connector.getState().then(setState)
     const removeStateListener = window.connector.onState(setState)
-    const removeUpdaterListener = window.connector.onUpdaterEvent((message) => {
-      const updaterEvent: SidecarEvent = { type: 'updater', level: 'info', message, payload: {} }
+    const removeUpdaterListener = window.connector.onUpdaterEvent((event) => {
+      setUpdaterEvent(event)
+      const logEvent: SidecarEvent = {
+        type: 'updater',
+        level: event.status === 'error' ? 'error' : 'info',
+        message: event.message,
+        payload: { status: event.status, version: event.version ?? '', percent: event.percent ?? 0 },
+      }
       setState((current) => ({
         ...current,
-        logs: [...current.logs, updaterEvent].slice(-200),
+        logs: [...current.logs, logEvent].slice(-200),
       }))
     })
 
@@ -146,9 +160,23 @@ export function App() {
             </button>
           </div>
 
-          <button className="text-button" disabled={isBusy} onClick={() => void handleUpdateCheck()}>
-            Check for updates
-          </button>
+          <div className="update-card">
+            <div>
+              <p className="section-kicker">App update</p>
+              <h2>Windows auto-update</h2>
+              <p className="muted">Phiên bản hiện tại: {appVersion}</p>
+            </div>
+            <div className={`update-status update-${updaterEvent.status}`}>
+              <span className="status-dot" />
+              <span>{updaterEvent.message}</span>
+            </div>
+            <button className="text-button" disabled={isBusy} onClick={() => void handleUpdateCheck()}>
+              Check for updates
+            </button>
+            <p className="muted update-note">
+              Bản Windows test hiện chưa ký số, nên Windows có thể hiện cảnh báo Unknown Publisher.
+            </p>
+          </div>
         </section>
       </section>
 

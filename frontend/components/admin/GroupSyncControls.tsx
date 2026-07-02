@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Button } from '@/components/admin/Button'
 import { StatusBadge, statusLabel } from '@/components/admin/StatusBadge'
+import { getPublicBackendApiUrl } from '@/lib/api/client'
 import type { SyncResponse } from '@/lib/api/types'
 
 type GroupSyncControlsProps = {
@@ -11,13 +12,17 @@ type GroupSyncControlsProps = {
 }
 
 const actions = [
-  { label: 'Bắt đầu đồng bộ', endpoint: '/api/backend/automation/group-sync/start', variant: 'primary' as const },
-  { label: 'Thu thập nhóm đang hiển thị', endpoint: '/api/backend/automation/group-sync/collect-visible', variant: 'outline' as const },
-  { label: 'Dừng đồng bộ', endpoint: '/api/backend/automation/group-sync/stop', variant: 'danger' as const },
+  { label: 'Bắt đầu đồng bộ', endpoint: '/api/automation/group-sync/start', variant: 'primary' as const },
+  {
+    label: 'Thu thập nhóm đang hiển thị',
+    endpoint: '/api/automation/group-sync/collect-visible',
+    variant: 'outline' as const,
+  },
+  { label: 'Dừng đồng bộ', endpoint: '/api/automation/group-sync/stop', variant: 'danger' as const },
 ]
 
 async function postSyncAction(endpoint: string): Promise<SyncResponse> {
-  const response = await fetch(endpoint, { method: 'POST' })
+  const response = await fetch(getPublicBackendApiUrl(endpoint), { method: 'POST' })
   if (!response.ok) {
     throw new Error('Không kết nối được backend FastAPI')
   }

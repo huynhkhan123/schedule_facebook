@@ -16,17 +16,35 @@ export interface ConnectorState {
   errorMessage: string
 }
 
+export type UpdaterStatus =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not_available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
+
+export interface UpdaterEvent {
+  status: UpdaterStatus
+  message: string
+  version?: string
+  percent?: number
+}
+
 export interface ConnectorBridge {
+  getAppVersion: () => Promise<string>
   getState: () => Promise<ConnectorState>
   pairConnector: (code: string) => Promise<ConnectorState>
   startConnector: () => Promise<ConnectorState>
   stopConnector: () => Promise<ConnectorState>
   checkForUpdates: () => Promise<void>
   onState: (callback: (state: ConnectorState) => void) => () => void
-  onUpdaterEvent: (callback: (message: string) => void) => () => void
+  onUpdaterEvent: (callback: (event: UpdaterEvent) => void) => () => void
 }
 
 const connectorBridge: ConnectorBridge = {
+  getAppVersion: () => ipcRenderer.invoke('app:getVersion') as Promise<string>,
   getState: () => ipcRenderer.invoke('connector:getState') as Promise<ConnectorState>,
   pairConnector: (code: string) => ipcRenderer.invoke('connector:pair', code) as Promise<ConnectorState>,
   startConnector: () => ipcRenderer.invoke('connector:start') as Promise<ConnectorState>,
@@ -37,8 +55,8 @@ const connectorBridge: ConnectorBridge = {
     ipcRenderer.on('connector:state', listener)
     return () => ipcRenderer.removeListener('connector:state', listener)
   },
-  onUpdaterEvent: (callback: (message: string) => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, message: string) => callback(message)
+  onUpdaterEvent: (callback: (event: UpdaterEvent) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, event: UpdaterEvent) => callback(event)
     ipcRenderer.on('updater:event', listener)
     return () => ipcRenderer.removeListener('updater:event', listener)
   },

@@ -5,10 +5,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
+from facebook_group_tool.application.dto import SyncedGroupInput
 from facebook_group_tool.application.use_cases.dispatch_connector_job import (
     DispatchConnectorJobUseCase,
 )
 from facebook_group_tool.application.use_cases.register_connector import RegisterConnectorUseCase
+from facebook_group_tool.application.use_cases.sync_groups import SyncGroupsUseCase
 from facebook_group_tool.domain.entities.connector import Connector
 from facebook_group_tool.domain.entities.connector_job import ConnectorJob
 from facebook_group_tool.presentation.api.dependencies import (
@@ -16,10 +18,12 @@ from facebook_group_tool.presentation.api.dependencies import (
     connector_repository,
     get_dispatch_connector_job_use_case,
     get_register_connector_use_case,
+    get_sync_groups_use_case,
     pairing_code_repository,
 )
 
 router = APIRouter()
+active_connector_sockets: dict[UUID, WebSocket] = {}
 
 RegisterConnectorDependency = Annotated[
     RegisterConnectorUseCase,
@@ -29,6 +33,7 @@ DispatchConnectorJobDependency = Annotated[
     DispatchConnectorJobUseCase,
     Depends(get_dispatch_connector_job_use_case),
 ]
+SyncGroupsDependency = Annotated[SyncGroupsUseCase, Depends(get_sync_groups_use_case)]
 
 
 class PairConnectorRequest(BaseModel):
@@ -117,7 +122,21 @@ async def create_connector_job(
         raise HTTPException(status_code=422, detail=str(error)) from error
     except RuntimeError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
+    await notify_connector_job_available(job)
     return connector_job_response(job)
+
+
+async def notify_connector_job_available(job: ConnectorJob) -> None:
+    websocket = active_connector_sockets.get(job.connector_id)
+    if websocket is None:
+        return
+    await websocket.send_json(
+        {
+            "type": "job_available",
+            "job_id": str(job.id),
+            "job_type": job.job_type,
+        }
+    )
 
 
 @router.get("/jobs/{job_id}")
@@ -133,12 +152,45 @@ async def complete_connector_job(
     job_id: UUID,
     request: CompleteConnectorJobRequest,
     use_case: DispatchConnectorJobDependency,
+    sync_groups: SyncGroupsDependency,
 ) -> dict[str, object]:
     try:
         job = await use_case.complete(job_id, request.result)
     except RuntimeError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
+    if job.job_type == "group_sync.collect_visible":
+        await sync_connector_groups(request.result, sync_groups)
     return connector_job_response(job)
+
+
+async def sync_connector_groups(
+    result: dict[str, Any],
+    sync_groups: SyncGroupsUseCase,
+) -> None:
+    payload = result.get("result")
+    if not isinstance(payload, dict):
+        return
+    groups = payload.get("groups")
+    if not isinstance(groups, list):
+        return
+    await sync_groups.execute(
+        [
+            SyncedGroupInput(
+                name=str(group.get("name", "")),
+                url=str(group.get("url", "")),
+                facebook_group_id=optional_string(group.get("facebook_group_id")),
+                cover_image_url=optional_string(group.get("cover_image_url")),
+            )
+            for group in groups
+            if isinstance(group, dict) and group.get("name") and group.get("url")
+        ]
+    )
+
+
+def optional_string(value: object) -> str | None:
+    if value is None:
+        return None
+    return str(value)
 
 
 @router.post("/jobs/{job_id}/fail")
@@ -163,6 +215,7 @@ async def connector_socket(websocket: WebSocket, connector_id: UUID) -> None:
         return
 
     await websocket.accept()
+    active_connector_sockets[connector_id] = websocket
     await connector_repository.save(replace(connector, status="online"))
     try:
         while True:
@@ -175,3 +228,5 @@ async def connector_socket(websocket: WebSocket, connector_id: UUID) -> None:
         current = await connector_repository.get(connector_id)
         if current is not None:
             await connector_repository.save(replace(current, status="offline"))
+    finally:
+        active_connector_sockets.pop(connector_id, None)

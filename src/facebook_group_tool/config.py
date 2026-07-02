@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     global_daily_auto_limit: PositiveInt = Field(default=20, le=20)
     default_min_delay_seconds: PositiveInt = 300
     default_max_delay_seconds: PositiveInt = 900
+    cors_allowed_origins: str = (
+        "https://schedule.bookinghome.one,"
+        "https://facebook-scheduler-cca.blueisland-303ddce3.eastus.azurecontainerapps.io,"
+        "http://localhost:3100,"
+        "http://127.0.0.1:3100"
+    )
+
+    def cors_origins(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_allowed_origins.split(",") if origin.strip()]
 
 
 @lru_cache

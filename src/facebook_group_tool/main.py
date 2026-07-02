@@ -3,6 +3,7 @@
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from facebook_group_tool.config import get_settings
@@ -19,6 +20,12 @@ from facebook_group_tool.presentation.web.routes import router as web_router
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="Facebook Group Tool", version="0.1.0")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins(),
+        allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health", tags=["system"])
     async def health() -> dict[str, str]:

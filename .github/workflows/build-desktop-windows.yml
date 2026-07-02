@@ -13,11 +13,9 @@ jobs:
     name: Build Windows x64 installer
     runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
     env:
-      DESKTOP_UPDATE_FEED_URL: ${{ vars.DESKTOP_UPDATE_FEED_URL }}
-      WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
-      WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+      CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -60,6 +58,16 @@ jobs:
         working-directory: desktop
         shell: pwsh
         run: npm run dist:win
+
+      - name: Publish Windows release assets
+        if: startsWith(github.ref, 'refs/tags/desktop-v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/desktop/*.exe
+            dist/desktop/*.blockmap
+            dist/desktop/latest.yml
+          fail_on_unmatched_files: true
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4

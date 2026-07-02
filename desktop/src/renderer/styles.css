@@ -248,6 +248,43 @@ button:disabled {
   gap: 12px;
 }
 
+.update-card {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(139, 148, 158, 0.16);
+  border-radius: var(--radius-panel);
+  padding: 16px;
+  background: rgba(13, 17, 23, 0.42);
+}
+
+.update-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.update-available,
+.update-downloading,
+.update-checking {
+  color: var(--color-warning);
+}
+
+.update-downloaded,
+.update-not_available {
+  color: var(--color-success);
+}
+
+.update-error {
+  color: var(--color-error);
+}
+
+.update-note {
+  font-size: 0.82rem;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

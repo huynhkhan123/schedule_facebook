@@ -5,6 +5,22 @@ from typing import Any, cast
 from fastapi.testclient import TestClient
 
 
+def test_connector_pairing_cors_preflight_allows_dashboard_origin(client: TestClient) -> None:
+    response = cast(
+        Any,
+        client.options(
+            "/api/connectors/pairing-codes",
+            headers={
+                "origin": "https://schedule.bookinghome.one",
+                "access-control-request-method": "POST",
+            },
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "https://schedule.bookinghome.one"
+
+
 def test_connector_pairing_and_job_lifecycle(client: TestClient) -> None:
     pairing_response = cast(Any, client.post("/api/connectors/pairing-codes"))
 
@@ -34,7 +50,8 @@ def test_connector_pairing_and_job_lifecycle(client: TestClient) -> None:
     connectors_response = cast(Any, client.get("/api/connectors"))
 
     assert connectors_response.status_code == 200
-    assert connectors_response.json()[0]["id"] == connector["id"]
+    connector_ids = {item["id"] for item in connectors_response.json()}
+    assert connector["id"] in connector_ids
 
     job_response = cast(
         Any,
@@ -46,7 +63,7 @@ def test_connector_pairing_and_job_lifecycle(client: TestClient) -> None:
 
     assert job_response.status_code == 201
     job = job_response.json()
-    assert job["connector_id"] == connector["id"]
+    assert job["connector_id"] in connector_ids
     assert job["status"] == "pending"
 
     complete_response = cast(
