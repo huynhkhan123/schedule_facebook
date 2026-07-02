@@ -2,33 +2,112 @@ version: 0.1.{build}
 
 image: Visual Studio 2022
 
+skip_non_tags: true
+
 branches:
   only:
     - main
 
 environment:
+  CSC_IDENTITY_AUTO_DISCOVERY: false
   PYTHON_VERSION: "3.12"
-  DESKTOP_UPDATE_FEED_URL: "https://schedule.bookinghome.one/downloads/desktop"
 
 install:
-  - cmd: powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
-  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv --version
-  - cmd: node --version
-  - cmd: npm --version
-  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv python install %PYTHON_VERSION%
-  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv sync --all-groups --frozen
-  - cmd: cd desktop && npm ci
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+        choco install gh -y
+        $env:Path = "C:\Program Files\GitHub CLI;$env:Path"
+      }
+      if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        irm https://astral.sh/uv/install.ps1 | iex
+        $env:Path = "$env:USERPROFILE\.local\bin;$env:Path"
+      }
+      uv --version
+      node --version
+      npm --version
+      uv python install $env:PYTHON_VERSION
+      uv sync --all-groups --frozen
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      Set-Location desktop
+      npm ci
+      Set-Location ..
 
 build_script:
-  - cmd: set "PATH=%USERPROFILE%\.local\bin;%PATH%" && uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
-  - cmd: cd desktop && npm run typecheck
-  - cmd: powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-sidecar.ps1
-  - cmd: cd desktop && npm run dist:win
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      uv run pytest tests/unit/test_connector_core.py tests/unit/test_connector_sidecar.py -v
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      Set-Location desktop
+      npm run typecheck
+      Set-Location ..
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      .\scripts\build-sidecar.ps1
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      Set-Location desktop
+      npm run dist:win -- --publish never
+      Set-Location ..
+
+test: off
 
 artifacts:
   - path: dist\desktop\*.exe
     name: facebook-group-connector-windows-installer
-  - path: dist\desktop\*.blockmap
+  - path: dist\desktop\*.exe.blockmap
     name: facebook-group-connector-windows-blockmap
   - path: dist\desktop\latest.yml
     name: facebook-group-connector-windows-update-metadata
+
+deploy_script:
+  - ps: |
+      $ErrorActionPreference = "Stop"
+      if ($env:APPVEYOR_REPO_TAG -ne "true") {
+        Write-Host "Not a tag build; skipping GitHub Release upload."
+        return
+      }
+      if ([string]::IsNullOrWhiteSpace($env:GH_TOKEN)) {
+        throw "GH_TOKEN is missing. Add it in AppVeyor Project Settings > Environment."
+      }
+
+      $repo = $env:APPVEYOR_REPO_NAME
+      $tag = $env:APPVEYOR_REPO_TAG_NAME
+      $version = node -p "require('./desktop/package.json').version"
+      $expectedTag = "desktop-v$version"
+      if ($tag -ne $expectedTag) {
+        throw "Tag $tag does not match desktop/package.json version $version. Expected $expectedTag."
+      }
+
+      $env:GH_TOKEN | gh auth login --with-token
+
+      $releaseExists = $true
+      gh release view $tag --repo $repo *> $null
+      if ($LASTEXITCODE -ne 0) {
+        $releaseExists = $false
+      }
+      if (-not $releaseExists) {
+        gh release create $tag `
+          --repo $repo `
+          --title "Facebook Group Connector $version" `
+          --notes "Windows unsigned test release $version. Customers may see Windows SmartScreen / Unknown Publisher warnings."
+      }
+
+      $assets = @()
+      $assets += Get-ChildItem -Path "dist\desktop" -Filter "*.exe" -File | ForEach-Object { $_.FullName }
+      $assets += Get-ChildItem -Path "dist\desktop" -Filter "*.exe.blockmap" -File | ForEach-Object { $_.FullName }
+      $latestYml = Join-Path "dist\desktop" "latest.yml"
+      if (Test-Path $latestYml) {
+        $assets += (Resolve-Path $latestYml).Path
+      }
+      if ($assets.Count -eq 0) {
+        throw "No release assets found in dist\desktop."
+      }
+      if (-not (Test-Path $latestYml)) {
+        throw "Missing latest.yml. electron-updater requires this metadata file."
+      }
+
+      gh release upload $tag --repo $repo --clobber @assets
+      Write-Host "Uploaded Windows desktop release assets to https://github.com/$repo/releases/tag/$tag"
