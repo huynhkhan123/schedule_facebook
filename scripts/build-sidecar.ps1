@@ -43,6 +43,7 @@ foreach ($Path in @($ResourceDir, $BrowserResourceDir)) {
 
 Set-Location $RootDir
 $env:PLAYWRIGHT_BROWSERS_PATH = $BrowserResourceDir
+$env:PLAYWRIGHT_SKIP_BROWSER_GC = "1"
 
 $UseUv = [bool](Get-Command uv -ErrorAction SilentlyContinue)
 $VenvPython = Join-Path $RootDir ".venv\Scripts\python.exe"
@@ -72,8 +73,10 @@ function Invoke-ProjectPyInstaller {
 
 Invoke-ProjectPython -m playwright install chromium
 
-$RemovePackageBrowsersScript = "from pathlib import Path; import shutil; import playwright; package_browsers = Path(playwright.__file__).parent / 'driver' / 'package' / '.local-browsers'; shutil.rmtree(package_browsers) if package_browsers.exists() else None"
-Invoke-ProjectPython -c $RemovePackageBrowsersScript
+$PackageBrowsersDir = Join-Path $RootDir ".venv\Lib\site-packages\playwright\driver\package\.local-browsers"
+if (Test-Path $PackageBrowsersDir) {
+  Remove-Item -Recurse -Force $PackageBrowsersDir
+}
 
 Invoke-ProjectPyInstaller `
   --clean `

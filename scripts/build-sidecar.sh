@@ -10,6 +10,7 @@ mkdir -p "$RESOURCE_DIR" "$BROWSER_RESOURCE_DIR"
 
 cd "$ROOT_DIR"
 export PLAYWRIGHT_BROWSERS_PATH="$BROWSER_RESOURCE_DIR"
+export PLAYWRIGHT_SKIP_BROWSER_GC=1
 
 if command -v uv >/dev/null 2>&1; then
   PYTHON_RUNNER=(uv run python)
