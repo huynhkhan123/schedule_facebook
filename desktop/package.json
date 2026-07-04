@@ -1,6 +1,6 @@
 {
   "name": "facebook-group-connector-desktop",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "private": true,
   "description": "Customer desktop app for the Facebook Group Connector",
   "main": "dist/main/main.js",
