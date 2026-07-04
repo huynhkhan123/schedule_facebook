@@ -55,6 +55,12 @@ class GroupSyncSessionService:
         self._status = GroupSyncStatus(status="syncing_visible_groups", synced_count=len(groups))
         return self._status, groups
 
+    async def open_group_url(self, url: str) -> None:
+        if self._browser_session is None:
+            self._browser_session = PlaywrightBrowserSession(self._profile_path)
+        await self._browser_session.open_url(url)
+        self._page = self._browser_session.page
+
     async def stop(self) -> GroupSyncStatus:
         if self._browser_session is not None:
             await self._browser_session.close()

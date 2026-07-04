@@ -1,5 +1,6 @@
+from collections.abc import Mapping
 from dataclasses import replace
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
@@ -170,9 +171,18 @@ async def sync_connector_groups(
     payload = result.get("result")
     if not isinstance(payload, dict):
         return
-    groups = payload.get("groups")
-    if not isinstance(groups, list):
+    result_payload = cast(Mapping[str, object], payload)
+    groups_payload = result_payload.get("groups")
+    if not isinstance(groups_payload, list):
         return
+    raw_groups = cast(list[object], groups_payload)
+    groups: list[Mapping[str, object]] = []
+    for group_payload in raw_groups:
+        if not isinstance(group_payload, dict):
+            continue
+        group = cast(Mapping[str, object], group_payload)
+        if group.get("name") and group.get("url"):
+            groups = [*groups, group]
     await sync_groups.execute(
         [
             SyncedGroupInput(
@@ -182,7 +192,6 @@ async def sync_connector_groups(
                 cover_image_url=optional_string(group.get("cover_image_url")),
             )
             for group in groups
-            if isinstance(group, dict) and group.get("name") and group.get("url")
         ]
     )
 

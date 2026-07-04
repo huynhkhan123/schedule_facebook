@@ -13,9 +13,17 @@ ALLOWED_CONNECTOR_JOB_TYPES = frozenset(
         "group_sync.stop",
         "post.prepare",
         "post.publish_prepared",
+        "group.open",
         "connector.self_test",
     }
 )
+
+JOB_REQUIRED_CAPABILITIES = {
+    "group.open": "group_open",
+    "group_sync.start": "group_sync",
+    "group_sync.collect_visible": "group_sync",
+    "group_sync.stop": "group_sync",
+}
 
 
 class DispatchConnectorJobUseCase:
@@ -31,8 +39,19 @@ class DispatchConnectorJobUseCase:
         if job_type not in ALLOWED_CONNECTOR_JOB_TYPES:
             raise ValueError("Connector job type is not allowed")
         connectors = await self._connector_repository.list()
-        connector = next((item for item in connectors if item.status == "online"), None)
-        connector = connector or next(iter(connectors), None)
+        required_capability = JOB_REQUIRED_CAPABILITIES.get(job_type)
+        capable_connectors = [
+            connector
+            for connector in connectors
+            if required_capability is None or required_capability in connector.capabilities
+        ]
+        online_connectors = [item for item in capable_connectors if item.status == "online"]
+        candidates = online_connectors or capable_connectors
+        connector = max(
+            candidates,
+            key=lambda item: item.last_seen_at or item.created_at,
+            default=None,
+        )
         if connector is None:
             raise RuntimeError("No connector is paired")
         job = ConnectorJob(connector_id=connector.id, job_type=job_type, payload=payload)

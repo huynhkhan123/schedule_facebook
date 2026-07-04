@@ -1,9 +1,13 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 
 from facebook_group_tool.application.use_cases.dispatch_connector_job import (
     DispatchConnectorJobUseCase,
+)
+from facebook_group_tool.infrastructure.automation.facebook_group_urls import (
+    normalize_facebook_group_url,
 )
 from facebook_group_tool.presentation.api.dependencies import get_dispatch_connector_job_use_case
 from facebook_group_tool.presentation.api.routes.connectors import notify_connector_job_available
@@ -14,6 +18,10 @@ DispatchConnectorJobDependency = Annotated[
     DispatchConnectorJobUseCase,
     Depends(get_dispatch_connector_job_use_case),
 ]
+
+
+class OpenGroupRequest(BaseModel):
+    url: str = Field(min_length=1)
 
 
 def sync_response(
@@ -30,12 +38,21 @@ async def dispatch_group_sync_job(
     job_type: str,
     message: str,
 ) -> dict[str, object]:
+    job = await dispatch_connector_job(use_case, job_type, {})
+    return sync_response("syncing_visible_groups", 0, message, job_id=str(job.id))
+
+
+async def dispatch_connector_job(
+    use_case: DispatchConnectorJobDependency,
+    job_type: str,
+    payload: dict[str, object],
+):
     try:
-        job = await use_case.execute(job_type=job_type, payload={})
+        job = await use_case.execute(job_type=job_type, payload=payload)
     except RuntimeError as error:
         raise HTTPException(status_code=409, detail=str(error)) from error
     await notify_connector_job_available(job)
-    return sync_response("syncing_visible_groups", 0, message, job_id=str(job.id))
+    return job
 
 
 @router.get("/status")
@@ -78,4 +95,21 @@ async def stop_group_sync(
         use_case,
         "group_sync.stop",
         "Đã gửi lệnh dừng sync xuống desktop connector.",
+    )
+
+
+@router.post("/groups/open")
+async def open_group_in_connector(
+    request: OpenGroupRequest,
+    use_case: DispatchConnectorJobDependency,
+) -> dict[str, object]:
+    normalized_url = normalize_facebook_group_url(request.url)
+    if normalized_url is None:
+        raise HTTPException(status_code=422, detail="Only Facebook group URLs can be opened")
+    job = await dispatch_connector_job(use_case, "group.open", {"url": normalized_url})
+    return sync_response(
+        "opening_browser",
+        0,
+        "Đã gửi lệnh mở nhóm trong browser của desktop connector.",
+        job_id=str(job.id),
     )

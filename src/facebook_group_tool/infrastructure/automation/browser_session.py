@@ -36,6 +36,14 @@ class PlaywrightBrowserSession:
             raise RuntimeError("browser session is not open")
         await self._page.goto(url)
 
+    async def open_url(self, url: str) -> None:
+        if self._context is None:
+            await self.open()
+        if self._page is None:
+            raise RuntimeError("browser session is not open")
+        await self._page.bring_to_front()
+        await self._page.goto(url)
+
     @property
     def page(self) -> Page:
         if self._page is None:

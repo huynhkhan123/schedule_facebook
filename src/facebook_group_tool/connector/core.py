@@ -10,12 +10,33 @@ from facebook_group_tool.connector.config import ConnectorConfig
 from facebook_group_tool.connector.job_runner import ConnectorJobRunner
 from facebook_group_tool.connector.token_store import ConnectorTokenStore
 
-CONNECTOR_CAPABILITIES = ["group_sync"]
+CONNECTOR_CAPABILITIES = ["group_sync", "group_open"]
 
 
 def websocket_url(server_url: str, connector_id: str, token: str) -> str:
     base = server_url.rstrip("/").replace("https://", "wss://").replace("http://", "ws://")
     return f"{base}/api/connectors/ws/{connector_id}?token={token}"
+
+
+async def process_connector_job(
+    *,
+    api_client: ConnectorApiClient,
+    runner: ConnectorJobRunner,
+    job_id: str,
+) -> None:
+    try:
+        job = await api_client.fetch_job(job_id)
+        result = await runner.run(job)
+        if result.get("status") == "failed":
+            message = str(result.get("message", "Connector job failed"))
+            await api_client.fail_job(job_id, message)
+            return
+        await api_client.complete_job(job_id, result)
+    except Exception as error:
+        try:
+            await api_client.fail_job(job_id, str(error) or error.__class__.__name__)
+        except Exception:
+            return
 
 
 class ConnectorCore:
@@ -82,13 +103,7 @@ class ConnectorCore:
                 job_id = str(event.get("job_id", ""))
                 if not job_id:
                     continue
-                job = await api_client.fetch_job(job_id)
-                result = await runner.run(job)
-                if result.get("status") == "failed":
-                    message = str(result.get("message", "Connector job failed"))
-                    await api_client.fail_job(job_id, message)
-                    continue
-                await api_client.complete_job(job_id, result)
+                await process_connector_job(api_client=api_client, runner=runner, job_id=job_id)
 
     def load_config(self) -> ConnectorConfig:
         return self._token_store.load()

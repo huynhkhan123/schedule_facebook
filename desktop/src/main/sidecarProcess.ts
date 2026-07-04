@@ -83,11 +83,10 @@ export class SidecarProcessManager extends EventEmitter {
     child.stderr.on('data', (chunk: Buffer) => {
       this.pushLog({
         type: 'stderr',
-        level: 'error',
+        level: 'warning',
         message: chunk.toString('utf8').trim(),
         payload: {},
       })
-      this.setStatus('error')
     })
 
     child.on('exit', (code) => {

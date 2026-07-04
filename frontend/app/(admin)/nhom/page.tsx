@@ -2,6 +2,7 @@ import { AdminTable } from '@/components/admin/AdminTable'
 import { Callout } from '@/components/admin/Callout'
 import { EmptyState } from '@/components/admin/EmptyState'
 import { GroupSyncControls } from '@/components/admin/GroupSyncControls'
+import { OpenGroupButton } from '@/components/admin/OpenGroupButton'
 import { PageHeader } from '@/components/admin/PageHeader'
 import { Panel } from '@/components/admin/Panel'
 import { StatusBadge } from '@/components/admin/StatusBadge'
@@ -61,9 +62,7 @@ export default async function GroupsPage() {
               <tr key={group.id} className="hover:bg-octo-elevated">
                 <td className="px-4 py-3 font-medium text-octo-text-primary">{group.name}</td>
                 <td className="px-4 py-3">
-                  <a href={group.url} target="_blank" rel="noreferrer" className="font-mono text-xs text-octo-primary hover:text-octo-primary-hover">
-                    Mở nhóm
-                  </a>
+                  <OpenGroupButton url={group.url} />
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={group.is_enabled ? 'syncing_visible_groups' : 'stopped'} />

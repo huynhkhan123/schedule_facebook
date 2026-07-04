@@ -1,6 +1,11 @@
 import argparse
 import asyncio
+import sys
 from pathlib import Path
+
+if sys.platform == "win32":
+    event_loop_policy = asyncio.WindowsSelectorEventLoopPolicy()  # type: ignore[attr-defined]
+    asyncio.set_event_loop_policy(event_loop_policy)
 
 from facebook_group_tool.connector.core import ConnectorCore
 from facebook_group_tool.connector.token_store import ConnectorTokenStore
@@ -39,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     pair_parser.add_argument("--code", required=True)
     pair_parser.add_argument("--server", required=True)
     pair_parser.add_argument("--machine-name", default="Local connector")
-    pair_parser.add_argument("--platform", default="darwin")
+    pair_parser.add_argument("--platform", default=sys.platform)
     pair_parser.add_argument("--browser-profile-path", type=Path, default=DEFAULT_PROFILE_PATH)
     pair_parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
 
