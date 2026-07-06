@@ -43,10 +43,35 @@ body {
   margin: 0;
   color: var(--color-octo-text-primary);
   background:
-    radial-gradient(circle at 16% 0%, rgb(47 129 247 / 10%), transparent 24rem),
+    radial-gradient(circle at 16% 0%, rgb(47 129 247 / 16%), transparent 26rem),
+    radial-gradient(circle at 86% 10%, rgb(63 185 80 / 10%), transparent 22rem),
+    radial-gradient(circle at 52% 100%, rgb(247 129 102 / 8%), transparent 26rem),
     linear-gradient(180deg, #0d1117 0%, #010409 100%);
   font-family: var(--font-sans);
   font-size: 14px;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 3%) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at center, black, transparent 76%);
+}
+
+body::after {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  opacity: 0.12;
+  background-image: radial-gradient(circle, rgb(255 255 255 / 70%) 0 1px, transparent 1px);
+  background-size: 3px 3px;
 }
 
 a {

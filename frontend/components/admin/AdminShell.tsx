@@ -12,7 +12,7 @@ export function AdminShell({ children }: AdminShellProps) {
         <Sidebar />
         <div className="min-w-0 flex-1">
           <Topbar />
-          <main className="mx-auto w-full max-w-[1280px] px-4 py-6 md:px-6 lg:px-8">{children}</main>
+          <main className="mx-auto w-full max-w-[1320px] px-4 py-6 md:px-6 lg:px-8">{children}</main>
         </div>
       </div>
     </div>
