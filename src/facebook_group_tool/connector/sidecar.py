@@ -2,9 +2,6 @@ import argparse
 import asyncio
 import json
 import sys
-
-if sys.platform == "win32":
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # pyright: ignore[reportAttributeAccessIssue]
 from pathlib import Path
 from typing import TextIO
 

@@ -13,6 +13,17 @@ def test_sidecar_default_server_url_uses_public_backend_api_domain() -> None:
     assert DEFAULT_SERVER_URL == "https://api.schedule.bookinghome.one"
 
 
+def test_connector_entrypoints_do_not_override_windows_event_loop_policy() -> None:
+    entrypoint_paths = [
+        Path("src/facebook_group_tool/connector/main.py"),
+        Path("src/facebook_group_tool/connector/sidecar.py"),
+    ]
+
+    for entrypoint_path in entrypoint_paths:
+        source = entrypoint_path.read_text(encoding="utf-8")
+        assert "WindowsSelectorEventLoopPolicy" not in source
+
+
 def test_sidecar_event_writer_outputs_json_line_without_token(tmp_path: Path) -> None:
     output_path = tmp_path / "events.jsonl"
 

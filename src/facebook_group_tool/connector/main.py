@@ -3,10 +3,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-if sys.platform == "win32":
-    event_loop_policy = asyncio.WindowsSelectorEventLoopPolicy()  # type: ignore[attr-defined]
-    asyncio.set_event_loop_policy(event_loop_policy)
-
 from facebook_group_tool.connector.core import ConnectorCore
 from facebook_group_tool.connector.token_store import ConnectorTokenStore
 

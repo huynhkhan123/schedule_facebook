@@ -31,6 +31,7 @@ mac:
   entitlementsInherit: build/entitlements.mac.plist
   notarize: true
 win:
+  artifactName: Facebook-Group-Connector-Setup-${version}.${ext}
   signAndEditExecutable: false
   target:
     - target: nsis
